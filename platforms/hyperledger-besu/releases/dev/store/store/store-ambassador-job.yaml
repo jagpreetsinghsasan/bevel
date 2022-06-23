@@ -1,0 +1,42 @@
+apiVersion: helm.fluxcd.io/v1
+kind: HelmRelease
+metadata:
+  name: store-ambassador-job
+  namespace: store-bes
+  annotations:
+    flux.weave.works/automated: "false"      
+spec:
+  releaseName: store-ambassador-job
+  chart:
+    path: platforms/hyperledger-besu/charts/generate_ambassador_certs
+    git: https://github.com/jagpreetsinghsasan/bevel.git
+    ref: localtest
+  values:
+    metadata:
+      name: store-ambassador-job
+      namespace: store-bes      
+    image:      
+      alpineutils: hyperledgerlabs/alpine-utils:1.0
+      pullSecret: regcred
+    network:
+      tmtls: True
+    node:
+      name: store
+      clientport: 8888 
+    vault:
+      address: http://192.168.1.10:8200
+      secretengine: secretsv2
+      authpath: besustore
+      rootcasecret: secretsv2/data/store-bes/crypto/ambassadorcerts/rootca
+      ambassadortlssecret: secretsv2/data/store-bes/crypto/store/tls
+      role: vault-role
+      serviceaccountname: vault-auth
+    subject:
+      ambassadortls: CN=DLT Root CA/OU=DLT/O=DLT/L=London/C=GB
+    opensslVars:
+      domain_name_pub: store.store-bes.svc.cluster.local
+      domain_name_priv: store.store-bes
+      domain_name_tessera: store-tessera.store-bes
+    healthcheck: 
+      retries: 10
+      sleepTimeAfterError: 2
