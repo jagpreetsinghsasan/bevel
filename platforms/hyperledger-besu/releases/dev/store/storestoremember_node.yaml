@@ -1,0 +1,78 @@
+apiVersion: helm.fluxcd.io/v1
+kind: HelmRelease
+metadata:
+  name: storestoremember-node
+  namespace: store-bes
+  annotations:
+    flux.weave.works/automated: "false"
+spec:
+  releaseName: storestoremember-node
+  chart:
+    git: https://github.com/jagpreetsinghsasan/bevel.git
+    ref: localtest
+    path: platforms/hyperledger-besu/charts/node_besu
+  values:
+    metadata:
+      namespace: store-bes
+      labels:
+    replicaCount: 1
+    staticnodes:
+      - "enode://e0b1b8fff0999a14a93def273478110f5b9402260a3bea05548e13863ea5d64e44d225d3c5f44f3d4c26d8fb1b9970d3b348c78fceb4fe9e8665fbb27c5b4614@validator1.supplychain-bes.svc.cluster.local:30303"
+      - "enode://eabd01ef1d0a04e4a67ed863cb1bdf7df0d100f1c13158412b55995a5dbd383c4c1878e309e2c4137d49fde10685f4a512c8b1fa12182bf815e1f84f1874a827@validator2.supplychain-bes.svc.cluster.local:30303"
+      - "enode://1605659ab6419d08000fa4f1bcfcf9e24ea638a20cb97a644241e817ef62c71bcf9910225fe8d6220d3add6dee94b12443ee105dcf7f4645b692c8dd15c8b7a6@validator3.supplychain-bes.svc.cluster.local:30303"
+      - "enode://d4f991a55bd85cb365817b5fbaad6e7fa6bb3eceb797b950445572b011ffe6775e61fd74778d5a00f9b803841a160ee44a5db5413e2b56a622d92bda8252d498@validator4.supplychain-bes.svc.cluster.local:30303"
+      - "enode://2b5c664a0e062b339c3800795f37b9ad08fe4babffb8882cf52a1c61bee367a325f53518c27faad5d139362de9b1e66f6b2d68ad8139767a806ebaac9aa35ae8@carrier.carrier-bes.svc.cluster.local:30303"
+      - "enode://da02c85d3fad35531aad53f77315d9ddb7f570234d3131199b47c0006f0e4b976a1dcb5c0b5a6cf04b0e5a307f032294ef9ff15eaa44283c7e1227358db75e5a@manufacturer.manufacturer-bes.svc.cluster.local:30303"
+      - "enode://34ecf7094de7f11b17943312994b5f1ca217e34a040fba90786b82531fd9423dedfe8e8b75082598d7d3ef8b40acc014328899e79f747ec2d40e48c8d856cbd3@store.store-bes.svc.cluster.local:30303"
+      - "enode://a69594db41e8d76dcd293597bb20d7325a027f0ffa8a49f4da1afba3e6993efbf453a70cd14872fac1ef8d38b2b0708c215ae897f5b602577e15b3d5e1d76940@warehouse.warehouse-bes.svc.cluster.local:30303"
+   
+
+    liveliness_check:
+      enabled: false
+    healthcheck:
+      readinessthreshold: 100
+      readinesscheckinterval: 5
+      
+    proxy:
+      provider: none
+      external_url: store.store-bes
+      p2p: 30303
+      rpc: 8545
+
+    images:
+      node: hyperledger/besu:21.10.6
+      alpineutils: hyperledgerlabs/alpine-utils:1.0     
+
+    node:
+      name: store
+      consensus: ibft
+      subject: O=Store,OU=Store,L=40.73/-74/New York,C=US
+      mountPath: /opt/besu/data
+      servicetype: ClusterIP
+      imagePullSecret: regcred
+      ports:
+        p2p: 30303
+        rpc: 8545
+        ws: 8546
+
+    tm:
+      type: tessera
+      tls: True
+      
+      url: "https://store-tessera.store-bes:8888"
+      
+    storage:
+      storageclassname: minikubestorageclass
+      storagesize: 1Gi
+
+    vault:
+      address: http://192.168.1.10:8200
+      secretprefix: secretsv2/data/store-bes/crypto/store
+      serviceaccountname: vault-auth
+      keyname: data
+      tmdir: tm
+      tlsdir: tls
+      role: vault-role
+      authpath: besustore
+
+    genesis: ewogICJjb25maWciOiB7CiAgICAiY2hhaW5JZCI6IDIwMTgsCiAgICAiY29uc3RhbnRpbm9wbGVmaXhibG9jayI6IDAsCiAgICAiY29udHJhY3RTaXplTGltaXQiOiAyMTQ3NDgzNjQ3LAogICAgImliZnQyIjogewogICAgICAiYmxvY2twZXJpb2RzZWNvbmRzIjogMiwKICAgICAgImVwb2NobGVuZ3RoIjogMzAwMDAsCiAgICAgICJyZXF1ZXN0dGltZW91dHNlY29uZHMiOiAxMAogICAgfQogIH0sCiAgIm5vbmNlIjogIjB4MCIsCiAgInRpbWVzdGFtcCI6ICIweDU4ZWU0MGJhIiwKICAiZ2FzTGltaXQiOiAiMHgxZmZmZmZmZmZmZmZmZiIsCiAgImRpZmZpY3VsdHkiOiAiMHgxIiwKICAiYWxsb2MiOiB7CiAgICAiZmUzYjU1N2U4ZmI2MmI4OWY0OTE2YjcyMWJlNTVjZWI4MjhkYmQ3MyI6IHsKICAgICAgInByaXZhdGVLZXkiOiAiOGYyYTU1OTQ5MDM4YTk2MTBmNTBmYjIzYjU4ODNhZjNiNGVjYjNjM2JiNzkyY2JjZWZiZDE1NDJjNjkyYmU2MyIsCiAgICAgICJjb21tZW50IjogInByaXZhdGUga2V5IGFuZCB0aGlzIGNvbW1lbnQgYXJlIGlnbm9yZWQuICBJbiBhIHJlYWwgY2hhaW4sIHRoZSBwcml2YXRlIGtleSBzaG91bGQgTk9UIGJlIHN0b3JlZCIsCiAgICAgICJiYWxhbmNlIjogIjB4YWQ3OGViYzVhYzYyMDAwMDAiCiAgICB9LAogICAgIjYyNzMwNjA5MGFiYUIzQTZlMTQwMGU5MzQ1YkM2MGM3OGE4QkVmNTciOiB7CiAgICAgICJwcml2YXRlS2V5IjogImM4NzUwOWExYzA2N2JiZGU3OGJlYjc5M2U2ZmE3NjUzMGI2MzgyYTRjMDI0MWU1ZTRhOWVjMGEwZjQ0ZGMwZDMiLAogICAgICAiY29tbWVudCI6ICJwcml2YXRlIGtleSBhbmQgdGhpcyBjb21tZW50IGFyZSBpZ25vcmVkLiAgSW4gYSByZWFsIGNoYWluLCB0aGUgcHJpdmF0ZSBrZXkgc2hvdWxkIE5PVCBiZSBzdG9yZWQiLAogICAgICAiYmFsYW5jZSI6ICI5MDAwMDAwMDAwMDAwMDAwMDAwMDAwMCIKICAgIH0sCiAgICAiZjE3ZjUyMTUxRWJFRjZDNzMzNEZBRDA4MGM1NzA0RDc3MjE2YjczMiI6IHsKICAgICAgInByaXZhdGVLZXkiOiAiYWU2YWU4ZTVjY2JmYjA0NTkwNDA1OTk3ZWUyZDUyZDJiMzMwNzI2MTM3Yjg3NTA1M2MzNmQ5NGU5NzRkMTYyZiIsCiAgICAgICJjb21tZW50IjogInByaXZhdGUga2V5IGFuZCB0aGlzIGNvbW1lbnQgYXJlIGlnbm9yZWQuICBJbiBhIHJlYWwgY2hhaW4sIHRoZSBwcml2YXRlIGtleSBzaG91bGQgTk9UIGJlIHN0b3JlZCIsCiAgICAgICJiYWxhbmNlIjogIjkwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIgogICAgfQogIH0sCiAgImV4dHJhRGF0YSI6ICIweGY4N2VhMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDBmODU0OTQ1YzVmYzM1ZTdmZTg4ODUzOGM5NGNiMjNhZjljOWMzMzNkMGRiYTFmOTQ5YzEzNDIyZTE5ZjViODc0Y2U1MDVmNTYyYmMzZDFlMTVhNDJiNTM1OTQ2NTllNTkzZTcyZTQ3NzI2ODY2ZWEzM2Y5YjIxY2Q0NWI0Yjg4YTQ2OTRhZjljMWE0MWM0Y2NmZjc0MjA1MTk1ZDY2ZGQwOGQwOGIyMDlhN2MyODA4NDAwMDAwMDAwYzAiCn0=
